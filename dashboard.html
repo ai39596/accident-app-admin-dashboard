@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcciEasy Admin — דשבורד</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      color: #0f172a;
+    }
+
+    /* ── Top bar ─────────────────────────────── */
+    .topbar {
+      background: #1d4ed8;
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-brand { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+    .btn-logout {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Layout ──────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+      display: grid;
+      gap: 24px;
+    }
+
+    /* ── Cards ───────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .card-icon.blue  { background: #dbeafe; }
+    .card-icon.green { background: #dcfce7; }
+    .card-icon.gray  { background: #f1f5f9; }
+
+    .card-title { font-size: 17px; font-weight: 800; }
+    .card-sub   { font-size: 13px; color: #64748b; margin-top: 2px; }
+
+    /* ── Form fields ─────────────────────────── */
+    .field       { margin-bottom: 14px; }
+    label        { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.15s;
+      background: #f8fafc;
+      font-family: inherit;
+      text-align: right;
+    }
+
+    textarea { resize: vertical; min-height: 70px; }
+
+    input:focus, textarea:focus { border-color: #1d4ed8; background: #fff; }
+    input::placeholder, textarea::placeholder { color: #94a3b8; }
+
+    /* ── Radio group ─────────────────────────── */
+    .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .radio-option {
+      flex: 1;
+      min-width: 120px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .radio-option input { display: none; }
+    .radio-option:has(input:checked) { border-color: #1d4ed8; background: #eff6ff; }
+
+    .radio-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s;
+    }
+
+    .radio-option:has(input:checked) .radio-dot { border-color: #1d4ed8; }
+    .radio-dot::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .radio-option:has(input:checked) .radio-dot::after { opacity: 1; }
+
+    /* ── Buttons ─────────────────────────────── */
+    .btn-primary {
+      padding: 12px 20px;
+      background: #1d4ed8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover  { background: #1e40af; }
+    .btn-primary:active { background: #1e3a8a; }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    .btn-danger {
+      padding: 6px 12px;
+      background: transparent;
+      color: #ef4444;
+      border: 1px solid #fca5a5;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-danger:hover { background: #fef2f2; }
+
+    /* ── Toast / feedback ────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+      white-space: nowrap;
+    }
+    .toast.success { background: #16a34a; }
+    .toast.error   { background: #dc2626; }
+    .toast.show    { opacity: 1; }
+
+    /* ── Articles list ───────────────────────── */
+    #articlesList { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+    .article-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 9px;
+      padding: 10px 14px;
+    }
+
+    .article-info { flex: 1; min-width: 0; }
+    .article-headline { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .article-sub      { font-size: 12px; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .empty-list {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+      padding: 20px 0;
+    }
+
+    /* ── Loading spinner ─────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Login banner ────────────────────────── */
+    .login-banner {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 4px;
+    }
+    .login-banner a { color: #1d4ed8; font-weight: 600; text-decoration: none; }
+    .login-banner a:hover { text-decoration: underline; }
+
+    .server-login-row { display: flex; gap: 10px; align-items: flex-end; }
+    .server-login-row input { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-brand">🚗 AcciEasy Admin</div>
+    <div class="topbar-actions">
+      <span id="repoLabel" style="font-size:13px; opacity:0.8;"></span>
+      <button class="btn-logout" onclick="logout()">התנתק</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- ── Server login helper ─────────────────── -->
+    <div class="card" id="serverLoginCard">
+      <div class="card-header">
+        <div class="card-icon gray">🔐</div>
+        <div>
+          <div class="card-title">כניסה לשרת (לשליחת התראות)</div>
+          <div class="card-sub">נדרש Bearer Token כדי לשלוח התראות דרך השרת</div>
+        </div>
+      </div>
+      <div id="tokenStatus"></div>
+      <div class="server-login-row">
+        <div class="field" style="flex:1; margin-bottom:0;">
+          <label for="loginUsername">שם משתמש</label>
+          <input type="text" id="loginUsername" placeholder="admin" value="admin" />
+        </div>
+        <div class="field" style="flex:1; margin-bottom:0;">
+          <label for="loginPassword">סיסמה</label>
+          <input type="text" id="loginPassword" placeholder="changeme" />
+        </div>
+        <button class="btn-primary" onclick="serverLogin()">התחבר לשרת</button>
+      </div>
+    </div>
+
+    <!-- ── Send Notification ─────────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon blue">🔔</div>
+        <div>
+          <div class="card-title">שלח התראה</div>
+          <div class="card-sub">התראה תישלח לכל המשתמשים שהתקינו את האפליקציה</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>סוג ההתראה</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="notifType" value="general" checked />
+            <span class="radio-dot"></span>
+            כללי
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="notifType" value="road" />
+            <span class="radio-dot"></span>
+            כביש
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notifTitle">כותרת</label>
+        <input type="text" id="notifTitle" placeholder="כותרת ההתראה" />
+      </div>
+
+      <div class="field">
+        <label for="notifBody">תוכן</label>
+        <textarea id="notifBody" placeholder="תוכן ההתראה..."></textarea>
+      </div>
+
+      <button class="btn-primary" id="sendNotifBtn" onclick="sendNotification()">
+        שלח התראה
+      </button>
+    </div>
+
+    <!-- ── Add Article ────────────────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon green">📰</div>
+        <div>
+          <div class="card-title">הוסף מאמר</div>
+          <div class="card-sub">המאמר יופיע בפיד של האפליקציה</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="artHeadline">כותרת ראשית</label>
+        <input type="text" id="artHeadline" placeholder="כותרת המאמר" />
+      </div>
+
+      <div class="field">
+        <label for="artSubheadline">כותרת משנה</label>
+        <textarea id="artSubheadline" placeholder="תיאור קצר של המאמר..." style="min-height:60px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="artImageUrl">קישור לתמונה (URL)</label>
+        <input type="url" id="artImageUrl" placeholder="https://..." />
+      </div>
+
+      <div class="field">
+        <label for="artLink">קישור למאמר</label>
+        <input type="url" id="artLink" placeholder="https://..." />
+      </div>
+
+      <button class="btn-primary" id="addArticleBtn" onclick="addArticle()">
+        הוסף מאמר
+      </button>
+    </div>
+
+    <!-- ── Articles List ──────────────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon gray">📋</div>
+        <div>
+          <div class="card-title">מאמרים פורסמו</div>
+          <div class="card-sub">ניהול המאמרים הקיימים בפיד</div>
+        </div>
+      </div>
+      <div id="articlesList">
+        <div class="empty-list">טוען מאמרים...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ── Credentials ───────────────────────────────────────────────────────────
+    const githubToken = localStorage.getItem('githubToken');
+    const githubRepo  = localStorage.getItem('githubRepo');
+    const serverUrl   = localStorage.getItem('serverUrl');
+    let   serverToken = localStorage.getItem('serverToken') || '';
+
+    if (!githubToken || !githubRepo || !serverUrl) {
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('repoLabel').textContent = githubRepo;
+
+    // ── Show server token status ───────────────────────────────────────────────
+    function refreshTokenStatus() {
+      const el = document.getElementById('tokenStatus');
+      if (serverToken) {
+        el.innerHTML = '<div class="login-banner" style="background:#f0fdf4;border-color:#86efac;color:#166534;">✓ Bearer Token שמור — שליחת התראות מופעלת</div>';
+      } else {
+        el.innerHTML = '<div class="login-banner">⚠️ אין Bearer Token — <strong>שליחת התראות לא תעבוד</strong>. התחבר לשרת למטה.</div>';
+      }
+    }
+    refreshTokenStatus();
+
+    // ── Server login ──────────────────────────────────────────────────────────
+    async function serverLogin() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      if (!username || !password) { showToast('מלא שם משתמש וסיסמה', 'error'); return; }
+
+      try {
+        const res = await fetch(`${serverUrl}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'שגיאת התחברות', 'error'); return; }
+        serverToken = data.token;
+        localStorage.setItem('serverToken', serverToken);
+        refreshTokenStatus();
+        showToast('התחברות לשרת הצליחה', 'success');
+      } catch {
+        showToast('לא ניתן להתחבר לשרת', 'error');
+      }
+    }
+
+    // ── Send notification ─────────────────────────────────────────────────────
+    async function sendNotification() {
+      if (!serverToken) { showToast('יש להתחבר לשרת תחילה', 'error'); return; }
+
+      const type  = document.querySelector('input[name="notifType"]:checked').value;
+      const title = document.getElementById('notifTitle').value.trim();
+      const body  = document.getElementById('notifBody').value.trim();
+
+      if (!title || !body) { showToast('מלא כותרת ותוכן', 'error'); return; }
+
+      const btn = document.getElementById('sendNotifBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> שולח...';
+
+      try {
+        const res = await fetch(`${serverUrl}/admin/notify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serverToken}`,
+          },
+          body: JSON.stringify({ title, body, type }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 401) { serverToken = ''; localStorage.removeItem('serverToken'); refreshTokenStatus(); }
+          showToast(data.error || 'שגיאה בשליחה', 'error');
+        } else {
+          showToast(`ההתראה נשלחה ל-${data.sent} מכשירים`, 'success');
+          document.getElementById('notifTitle').value = '';
+          document.getElementById('notifBody').value = '';
+        }
+      } catch {
+        showToast('שגיאת רשת', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'שלח התראה';
+      }
+    }
+
+    // ── GitHub API helpers ────────────────────────────────────────────────────
+    const GITHUB_API = `https://api.github.com/repos/${githubRepo}/contents/articles.json`;
+
+    async function readArticlesFile() {
+      const res = await fetch(GITHUB_API, {
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+      const file = await res.json();
+      const articles = JSON.parse(atob(file.content.replace(/\n/g, '')));
+      return { articles, sha: file.sha };
+    }
+
+    async function writeArticlesFile(articles, sha) {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(articles, null, 2))));
+      const res = await fetch(GITHUB_API, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Update articles (${new Date().toISOString()})`,
+          content: encoded,
+          sha,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || `GitHub API ${res.status}`);
+      }
+    }
+
+    // ── Load and render articles ──────────────────────────────────────────────
+    async function loadArticles() {
+      const list = document.getElementById('articlesList');
+      try {
+        const { articles } = await readArticlesFile();
+        renderArticles(articles);
+      } catch (e) {
+        list.innerHTML = `<div class="empty-list" style="color:#ef4444;">שגיאה בטעינת מאמרים: ${e.message}</div>`;
+      }
+    }
+
+    function renderArticles(articles) {
+      const list = document.getElementById('articlesList');
+      if (!articles.length) {
+        list.innerHTML = '<div class="empty-list">אין מאמרים עדיין</div>';
+        return;
+      }
+      list.innerHTML = articles.map(a => `
+        <div class="article-row" id="art-${a.id}">
+          <div class="article-info">
+            <div class="article-headline">${escapeHtml(a.headline)}</div>
+            <div class="article-sub">${escapeHtml(a.subheadline)}</div>
+          </div>
+          <button class="btn-danger" onclick="deleteArticle('${a.id}')">מחק</button>
+        </div>
+      `).join('');
+    }
+
+    // ── Add article ───────────────────────────────────────────────────────────
+    async function addArticle() {
+      const headline    = document.getElementById('artHeadline').value.trim();
+      const subheadline = document.getElementById('artSubheadline').value.trim();
+      const imageUrl    = document.getElementById('artImageUrl').value.trim();
+      const link        = document.getElementById('artLink').value.trim();
+
+      if (!headline || !subheadline || !imageUrl || !link) {
+        showToast('מלא את כל השדות', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('addArticleBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> שומר...';
+
+      try {
+        const { articles, sha } = await readArticlesFile();
+        const newArticle = {
+          id: crypto.randomUUID(),
+          headline,
+          subheadline,
+          imageUrl,
+          link,
+          createdAt: new Date().toISOString(),
+        };
+        await writeArticlesFile([newArticle, ...articles], sha);
+
+        // Clear form
+        document.getElementById('artHeadline').value = '';
+        document.getElementById('artSubheadline').value = '';
+        document.getElementById('artImageUrl').value = '';
+        document.getElementById('artLink').value = '';
+
+        showToast('המאמר נוסף בהצלחה', 'success');
+        await loadArticles();
+      } catch (e) {
+        showToast(`שגיאה: ${e.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'הוסף מאמר';
+      }
+    }
+
+    // ── Delete article ────────────────────────────────────────────────────────
+    async function deleteArticle(id) {
+      if (!confirm('האם למחוק את המאמר?')) return;
+
+      try {
+        const { articles, sha } = await readArticlesFile();
+        const updated = articles.filter(a => a.id !== id);
+        await writeArticlesFile(updated, sha);
+        showToast('המאמר נמחק', 'success');
+        renderArticles(updated);
+      } catch (e) {
+        showToast(`שגיאה: ${e.message}`, 'error');
+      }
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+    function logout() {
+      if (!confirm('להתנתק?')) return;
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `toast ${type} show`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadArticles();
+  </script>
+</body>
+</html>
