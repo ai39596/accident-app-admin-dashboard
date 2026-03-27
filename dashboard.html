@@ -192,6 +192,44 @@
     }
     .btn-danger:hover { background: #fef2f2; }
 
+    .btn-edit {
+      padding: 6px 12px;
+      background: transparent;
+      color: #1d4ed8;
+      border: 1px solid #93c5fd;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-edit:hover { background: #eff6ff; }
+
+    .edit-mode-banner {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1e40af;
+      margin-bottom: 14px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-cancel-edit {
+      background: transparent;
+      border: 1px solid #93c5fd;
+      color: #1d4ed8;
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
     /* ── Toast / feedback ────────────────────── */
     .toast {
       position: fixed;
@@ -344,7 +382,7 @@
     </div>
 
     <!-- ── Add Article ────────────────────────── -->
-    <div class="card">
+    <div class="card" id="addArticleSection">
       <div class="card-header">
         <div class="card-icon green">📰</div>
         <div>
@@ -371,6 +409,11 @@
       <div class="field">
         <label for="artLink">קישור למאמר</label>
         <input type="url" id="artLink" placeholder="https://..." />
+      </div>
+
+      <div id="editModeBanner" class="edit-mode-banner">
+        <span>✏️ עורך מאמר קיים</span>
+        <button class="btn-cancel-edit" onclick="cancelEdit()">ביטול</button>
       </div>
 
       <button class="btn-primary" id="addArticleBtn" onclick="addArticle()">
@@ -402,6 +445,7 @@
     const githubRepo  = localStorage.getItem('githubRepo');
     const serverUrl   = localStorage.getItem('serverUrl');
     let   serverToken = localStorage.getItem('serverToken') || '';
+    let   editingId   = null;
 
     if (!githubToken || !githubRepo || !serverUrl) {
       window.location.href = 'index.html';
@@ -522,11 +566,15 @@
     // ── Load and render articles ──────────────────────────────────────────────
     async function loadArticles() {
       const list = document.getElementById('articlesList');
+      list.innerHTML = '<div class="empty-list">טוען מאמרים...</div>';
       try {
         const { articles } = await readArticlesFile();
         renderArticles(articles);
       } catch (e) {
-        list.innerHTML = `<div class="empty-list" style="color:#ef4444;">שגיאה בטעינת מאמרים: ${e.message}</div>`;
+        list.innerHTML = `
+          <div class="empty-list" style="color:#ef4444; margin-bottom:10px;">שגיאה בטעינת מאמרים: ${escapeHtml(e.message)}</div>
+          <button class="btn-primary" onclick="loadArticles()" style="width:100%;">נסה שוב</button>
+        `;
       }
     }
 
@@ -542,9 +590,34 @@
             <div class="article-headline">${escapeHtml(a.headline)}</div>
             <div class="article-sub">${escapeHtml(a.subheadline)}</div>
           </div>
-          <button class="btn-danger" onclick="deleteArticle('${a.id}')">מחק</button>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn-edit" onclick="editArticle('${a.id}','${escapeAttr(a.headline)}','${escapeAttr(a.subheadline)}','${escapeAttr(a.imageUrl)}','${escapeAttr(a.link)}')">ערוך</button>
+            <button class="btn-danger" onclick="deleteArticle('${a.id}')">מחק</button>
+          </div>
         </div>
       `).join('');
+    }
+
+    // ── Edit article ──────────────────────────────────────────────────────────
+    function editArticle(id, headline, subheadline, imageUrl, link) {
+      editingId = id;
+      document.getElementById('artHeadline').value = headline;
+      document.getElementById('artSubheadline').value = subheadline;
+      document.getElementById('artImageUrl').value = imageUrl;
+      document.getElementById('artLink').value = link;
+      document.getElementById('addArticleBtn').textContent = 'עדכן מאמר';
+      document.getElementById('editModeBanner').style.display = 'flex';
+      document.getElementById('addArticleSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+      editingId = null;
+      document.getElementById('artHeadline').value = '';
+      document.getElementById('artSubheadline').value = '';
+      document.getElementById('artImageUrl').value = '';
+      document.getElementById('artLink').value = '';
+      document.getElementById('addArticleBtn').textContent = 'הוסף מאמר';
+      document.getElementById('editModeBanner').style.display = 'none';
     }
 
     // ── Add article ───────────────────────────────────────────────────────────
@@ -565,23 +638,19 @@
 
       try {
         const { articles, sha } = await readArticlesFile();
-        const newArticle = {
-          id: crypto.randomUUID(),
-          headline,
-          subheadline,
-          imageUrl,
-          link,
-          createdAt: new Date().toISOString(),
-        };
-        await writeArticlesFile([newArticle, ...articles], sha);
-
-        // Clear form
-        document.getElementById('artHeadline').value = '';
-        document.getElementById('artSubheadline').value = '';
-        document.getElementById('artImageUrl').value = '';
-        document.getElementById('artLink').value = '';
-
-        showToast('המאמר נוסף בהצלחה', 'success');
+        let updated;
+        if (editingId) {
+          updated = articles.map(a => a.id === editingId
+            ? { ...a, headline, subheadline, imageUrl, link }
+            : a
+          );
+        } else {
+          updated = [{ id: crypto.randomUUID(), headline, subheadline, imageUrl, link, createdAt: new Date().toISOString() }, ...articles];
+        }
+        await writeArticlesFile(updated, sha);
+        const wasEditing = !!editingId;
+        cancelEdit();
+        showToast(wasEditing ? 'המאמר עודכן בהצלחה' : 'המאמר נוסף בהצלחה', 'success');
         await loadArticles();
       } catch (e) {
         showToast(`שגיאה: ${e.message}`, 'error');
@@ -625,6 +694,10 @@
 
     function escapeHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function escapeAttr(str) {
+      return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
