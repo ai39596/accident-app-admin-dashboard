@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "2f444873-0bde-4fb7-bb58-6a9a33412eb4",
+    "headline": "מאמר 1",
+    "subheadline": "כותרת משנה",
+    "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMxnsXCO_CpfBfSmgMaDNZs6yEtDkdMtnQvg&s",
+    "link": "https://www.oryarok.org.il/",
+    "createdAt": "2026-03-27T12:02:07.722Z"
+  }
+]
