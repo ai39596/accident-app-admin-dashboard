@@ -317,21 +317,23 @@
 
   <div class="container">
 
-    <!-- ── Firebase setup ──────────────────────── -->
-    <div class="card" id="firebaseCard">
+    <!-- ── Server login ───────────────────────── -->
+    <div class="card" id="serverLoginCard">
       <div class="card-header">
-        <div class="card-icon gray">🔥</div>
+        <div class="card-icon gray">🔐</div>
         <div>
-          <div class="card-title">Firebase Service Account</div>
-          <div class="card-sub">נדרש לשליחת התראות ישירות ל-FCM ללא שרת</div>
+          <div class="card-title">חיבור לשרת</div>
+          <div class="card-sub">נדרש לשליחת התראות למשתמשים</div>
         </div>
       </div>
-      <div id="saStatus"></div>
+      <div id="tokenStatus"></div>
       <div class="field">
-        <label for="serviceAccountJson">הדבק את ה-Service Account JSON מ-Firebase Console</label>
-        <textarea id="serviceAccountJson" style="min-height:90px; font-size:12px; direction:ltr; text-align:left; overflow-x:auto; word-break:break-all;" placeholder='הדבק כאן את ה-JSON'></textarea>
+        <label for="adminPassword">סיסמת אדמין</label>
+        <div class="server-login-row">
+          <input type="text" id="adminPassword" placeholder="הזן סיסמת אדמין" />
+          <button class="btn-primary" onclick="serverLogin()">התחבר</button>
+        </div>
       </div>
-      <button class="btn-primary" onclick="saveServiceAccount()">שמור Service Account</button>
     </div>
 
     <!-- ── Send Notification ─────────────────── -->
@@ -437,106 +439,54 @@
     // ── Credentials ───────────────────────────────────────────────────────────
     const githubToken = localStorage.getItem('githubToken');
     const githubRepo  = localStorage.getItem('githubRepo');
-    let   serviceAccount  = null;
+    const serverUrl   = localStorage.getItem('serverUrl');
+    let   serverToken = localStorage.getItem('serverToken') || '';
     let   editingId        = null;
     let   displayLimit     = 5;
     let   allLoadedArticles = [];
     let   cachedSha        = null;
 
-    if (!githubToken || !githubRepo) {
+    if (!githubToken || !githubRepo || !serverUrl) {
       window.location.href = 'index.html';
     }
 
     document.getElementById('repoLabel').textContent = githubRepo;
 
-    // ── Firebase service account ──────────────────────────────────────────────
-    try {
-      const saved = localStorage.getItem('firebaseServiceAccount');
-      if (saved) serviceAccount = JSON.parse(saved);
-    } catch {}
-
-    function refreshServiceAccountStatus() {
-      const el = document.getElementById('saStatus');
-      if (serviceAccount) {
-        el.innerHTML = '<div class="login-banner" style="background:#f0fdf4;border-color:#86efac;color:#166534;">✓ Firebase Service Account שמור — שליחת התראות מופעלת</div>';
+    // ── Server token status ───────────────────────────────────────────────────
+    function refreshTokenStatus() {
+      const el = document.getElementById('tokenStatus');
+      if (serverToken) {
+        el.innerHTML = '<div class="login-banner" style="background:#f0fdf4;border-color:#86efac;color:#166534;">✓ מחובר לשרת — שליחת התראות מופעלת</div>';
       } else {
-        el.innerHTML = '<div class="login-banner">⚠️ אין Firebase Service Account — שליחת התראות לא תעבוד.</div>';
+        el.innerHTML = '<div class="login-banner">⚠️ לא מחובר לשרת — הזן סיסמת אדמין כדי לשלוח התראות.</div>';
       }
     }
-    refreshServiceAccountStatus();
+    refreshTokenStatus();
 
-    function saveServiceAccount() {
-      const text = document.getElementById('serviceAccountJson').value.trim();
+    async function serverLogin() {
+      const password = document.getElementById('adminPassword').value.trim();
+      if (!password) { showToast('הזן סיסמה', 'error'); return; }
       try {
-        serviceAccount = JSON.parse(text);
-        localStorage.setItem('firebaseServiceAccount', text);
-        document.getElementById('serviceAccountJson').value = '';
-        refreshServiceAccountStatus();
-        showToast('Firebase Service Account נשמר', 'success');
-      } catch {
-        showToast('JSON לא תקין', 'error');
+        const res = await fetch(`${serverUrl}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) { showToast('סיסמה שגויה', 'error'); return; }
+        const data = await res.json();
+        serverToken = data.token;
+        localStorage.setItem('serverToken', serverToken);
+        document.getElementById('adminPassword').value = '';
+        refreshTokenStatus();
+        showToast('התחברת בהצלחה', 'success');
+      } catch (e) {
+        showToast(`שגיאת חיבור: ${e.message}`, 'error');
       }
     }
 
-    // ── FCM JWT helpers ───────────────────────────────────────────────────────
-    function pemToArrayBuffer(pem) {
-      const b64 = pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s/g, '');
-      const binary = atob(b64);
-      const buf = new ArrayBuffer(binary.length);
-      const view = new Uint8Array(buf);
-      for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i);
-      return buf;
-    }
-
-    function base64url(input) {
-      let b64;
-      if (input instanceof ArrayBuffer) {
-        b64 = btoa(String.fromCharCode(...new Uint8Array(input)));
-      } else {
-        b64 = btoa(unescape(encodeURIComponent(JSON.stringify(input))));
-      }
-      return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    async function getFcmAccessToken() {
-      const now = Math.floor(Date.now() / 1000);
-      const header = base64url({ alg: 'RS256', typ: 'JWT' });
-      const claim  = base64url({
-        iss:   serviceAccount.client_email,
-        scope: 'https://www.googleapis.com/auth/firebase.messaging',
-        aud:   'https://oauth2.googleapis.com/token',
-        exp:   now + 3600,
-        iat:   now,
-      });
-      const signingInput = `${header}.${claim}`;
-
-      const key = await crypto.subtle.importKey(
-        'pkcs8',
-        pemToArrayBuffer(serviceAccount.private_key),
-        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-        false,
-        ['sign'],
-      );
-      const sig = await crypto.subtle.sign(
-        'RSASSA-PKCS1-v1_5',
-        key,
-        new TextEncoder().encode(signingInput),
-      );
-      const jwt = `${signingInput}.${base64url(sig)}`;
-
-      const res = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-      });
-      const data = await res.json();
-      if (!data.access_token) throw new Error(data.error_description || 'Failed to get FCM access token');
-      return data.access_token;
-    }
-
-    // ── Send notification via FCM HTTP v1 API ─────────────────────────────────
+    // ── Send notification via server ──────────────────────────────────────────
     async function sendNotification() {
-      if (!serviceAccount) { showToast('יש להגדיר Firebase Service Account תחילה', 'error'); return; }
+      if (!serverToken) { showToast('יש להתחבר לשרת תחילה', 'error'); return; }
 
       const type  = document.querySelector('input[name="notifType"]:checked').value;
       const title = document.getElementById('notifTitle').value.trim();
@@ -549,35 +499,26 @@
       btn.innerHTML = '<span class="spinner"></span> שולח...';
 
       try {
-        const accessToken = await getFcmAccessToken();
-        const projectId   = serviceAccount.project_id;
-
-        const res = await fetch(
-          `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: {
-                topic: type,
-                notification: { title, body },
-                data: { type },
-                android: { notification: { channel_id: 'default', sound: 'default' } },
-                apns:    { payload: { aps: { sound: 'default' } } },
-              },
-            }),
+        const res = await fetch(`${serverUrl}/admin/notify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serverToken}`,
           },
-        );
+          body: JSON.stringify({ title, body, type }),
+        });
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error?.message || `FCM error ${res.status}`);
+        if (res.status === 401) {
+          serverToken = '';
+          localStorage.removeItem('serverToken');
+          refreshTokenStatus();
+          showToast('הסשן פג — התחבר מחדש', 'error');
+          return;
         }
 
-        showToast('ההתראה נשלחה בהצלחה', 'success');
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data = await res.json();
+        showToast(`ההתראה נשלחה ל-${data.sent ?? 0} מכשירים`, 'success');
         document.getElementById('notifTitle').value = '';
         document.getElementById('notifBody').value  = '';
       } catch (e) {
