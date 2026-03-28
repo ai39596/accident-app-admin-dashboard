@@ -12,6 +12,7 @@
       background: #f0f4ff;
       min-height: 100vh;
       color: #0f172a;
+      overflow-x: clip;
     }
 
     /* ── Top bar ─────────────────────────────── */
@@ -49,6 +50,7 @@
     /* ── Layout ──────────────────────────────── */
     .container {
       max-width: 900px;
+      width: 100%;
       margin: 0 auto;
       padding: 28px 20px 60px;
       display: grid;
@@ -600,14 +602,14 @@
       }
       const visible = articles.slice(0, displayLimit);
       const hasMore = displayLimit < articles.length;
-      list.innerHTML = visible.map(a => `
+      list.innerHTML = visible.map((a, i) => `
         <div class="article-row" id="art-${a.id}">
           <div class="article-info">
             <div class="article-headline">${escapeHtml(a.headline)}</div>
             <div class="article-sub">${escapeHtml(a.subheadline)}</div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button class="btn-edit" onclick="editArticle('${a.id}','${escapeAttr(a.headline)}','${escapeAttr(a.subheadline)}','${escapeAttr(a.imageUrl)}','${escapeAttr(a.link)}')">ערוך</button>
+            <button class="btn-edit" onclick="editArticle(${i})">ערוך</button>
             <button class="btn-danger" onclick="deleteArticle('${a.id}')">מחק</button>
           </div>
         </div>
@@ -624,12 +626,13 @@
     }
 
     // ── Edit article ──────────────────────────────────────────────────────────
-    function editArticle(id, headline, subheadline, imageUrl, link) {
-      editingId = id;
-      document.getElementById('artHeadline').value = headline;
-      document.getElementById('artSubheadline').value = subheadline;
-      document.getElementById('artImageUrl').value = imageUrl;
-      document.getElementById('artLink').value = link;
+    function editArticle(index) {
+      const a = allLoadedArticles[index];
+      editingId = a.id;
+      document.getElementById('artHeadline').value = a.headline;
+      document.getElementById('artSubheadline').value = a.subheadline;
+      document.getElementById('artImageUrl').value = a.imageUrl;
+      document.getElementById('artLink').value = a.link;
       document.getElementById('addArticleBtn').textContent = 'עדכן מאמר';
       document.getElementById('editModeBanner').style.display = 'flex';
       document.getElementById('addArticleSection').scrollIntoView({ behavior: 'smooth' });
@@ -722,10 +725,6 @@
 
     function escapeHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function escapeAttr(str) {
-      return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
