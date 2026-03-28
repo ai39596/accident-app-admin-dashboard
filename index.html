@@ -45,34 +45,14 @@
       font-size: 22px;
     }
 
-    .logo-text {
-      font-size: 20px;
-      font-weight: 800;
-      color: #0f172a;
-    }
+    .logo-text { font-size: 20px; font-weight: 800; color: #0f172a; }
+    .logo-sub  { font-size: 12px; color: #64748b; font-weight: 500; }
 
-    .logo-sub {
-      font-size: 12px;
-      color: #64748b;
-      font-weight: 500;
-    }
+    h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
 
-    h1 {
-      font-size: 22px;
-      font-weight: 800;
-      color: #0f172a;
-      margin-bottom: 6px;
-    }
+    .subtitle { font-size: 14px; color: #64748b; margin-bottom: 28px; }
 
-    .subtitle {
-      font-size: 14px;
-      color: #64748b;
-      margin-bottom: 28px;
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
+    .field { margin-bottom: 16px; }
 
     label {
       display: block;
@@ -99,11 +79,7 @@
     input:focus { border-color: #1d4ed8; background: #fff; }
     input::placeholder { color: #94a3b8; }
 
-    .hint {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-top: 5px;
-    }
+    .hint { font-size: 11px; color: #94a3b8; margin-top: 5px; }
 
     .btn {
       width: 100%;
@@ -120,7 +96,7 @@
       font-family: inherit;
     }
 
-    .btn:hover { background: #1e40af; }
+    .btn:hover  { background: #1e40af; }
     .btn:active { background: #1e3a8a; }
 
     .error {
@@ -180,23 +156,9 @@
         <input
           type="url"
           id="serverUrl"
-          placeholder="https://accieasy-server-q43x.onrender.com"
+          placeholder="https://accieasy-server.onrender.com"
           required
         />
-      </div>
-
-      <div class="field">
-        <label for="serverToken">Bearer Token לניהול (מ-/admin/login)</label>
-        <input
-          type="password"
-          id="serverToken"
-          placeholder="הזן טוקן לאחר התחברות דרך /admin/login"
-          autocomplete="off"
-        />
-        <div class="hint">
-          ניתן להשאיר ריק כעת ולהתחבר דרך ה-server בנפרד.
-          או: שלח POST ל-/admin/login עם username + password כדי לקבל טוקן.
-        </div>
       </div>
 
       <button type="submit" class="btn">כניסה לדשבורד</button>
@@ -204,7 +166,7 @@
   </div>
 
   <script>
-    // If already set up, go straight to dashboard
+    // Already logged in — go straight to dashboard
     if (localStorage.getItem('githubToken') && localStorage.getItem('githubRepo') && localStorage.getItem('serverUrl')) {
       window.location.href = 'dashboard.html';
     }
@@ -215,18 +177,16 @@
       const githubToken = document.getElementById('githubToken').value.trim();
       const githubRepo  = document.getElementById('githubRepo').value.trim();
       const serverUrl   = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
-      const serverToken = document.getElementById('serverToken').value.trim();
 
       const errorMsg = document.getElementById('errorMsg');
       errorMsg.style.display = 'none';
 
       if (!githubToken || !githubRepo || !serverUrl) {
-        errorMsg.textContent = 'יש למלא את כל השדות הנדרשים';
+        errorMsg.textContent = 'יש למלא את כל השדות';
         errorMsg.style.display = 'block';
         return;
       }
 
-      // Basic format check for repo
       if (!githubRepo.includes('/')) {
         errorMsg.textContent = 'שם ה-repo חייב להיות בפורמט username/repo-name';
         errorMsg.style.display = 'block';
@@ -234,11 +194,8 @@
       }
 
       localStorage.setItem('githubToken', githubToken);
-      localStorage.setItem('githubRepo', githubRepo);
-      localStorage.setItem('serverUrl', serverUrl);
-      if (serverToken) {
-        localStorage.setItem('serverToken', serverToken);
-      }
+      localStorage.setItem('githubRepo',  githubRepo);
+      localStorage.setItem('serverUrl',   serverUrl);
 
       window.location.href = 'dashboard.html';
     });
